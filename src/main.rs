@@ -1,8 +1,14 @@
-use std::{env, fs, fs::OpenOptions, io::Write, process};
+use std::{
+    env,
+    fs::{self, OpenOptions},
+    io::Write,
+    process::{self, Command},
+};
 
 use clap::Parser;
 
 const DEFAULT_CONFIG: &str = include_str!("../templates/CMakeLists.txt");
+const DEFAULT_GITIGNORE: &str = include_str!("../templates/gitignore");
 const DEFAULT_MAIN: &str = include_str!("../templates/main.cpp");
 
 #[derive(clap::Parser)]
@@ -35,10 +41,13 @@ fn main() {
     };
 
     let mut project_dir = current_dir;
-    project_dir.push(project_name.clone());
+    project_dir.push(&project_name);
 
     let mut cmakelists_file = project_dir.clone();
     cmakelists_file.push("CMakeLists.txt");
+
+    let mut gitignore_file = project_dir.clone();
+    gitignore_file.push(".gitignore");
 
     let mut src_dir = project_dir.clone();
     src_dir.push("src");
@@ -46,7 +55,7 @@ fn main() {
     let mut main_file = src_dir.clone();
     main_file.push("main.cpp");
 
-    match fs::create_dir(project_dir.clone()) {
+    match fs::create_dir(&project_dir) {
         Ok(_) => {}
         Err(_) => {
             eprintln!(
@@ -58,7 +67,7 @@ fn main() {
         }
     }
 
-    match fs::create_dir(src_dir.clone()) {
+    match fs::create_dir(&src_dir) {
         Ok(_) => {}
         Err(_) => {
             eprintln!(
@@ -73,7 +82,7 @@ fn main() {
     let mut file = match OpenOptions::new()
         .create_new(true)
         .write(true)
-        .open(cmakelists_file.clone())
+        .open(&cmakelists_file)
     {
         Ok(file) => file,
         Err(_) => {
@@ -90,7 +99,7 @@ fn main() {
     let mut file = match OpenOptions::new()
         .create_new(true)
         .write(true)
-        .open(main_file.clone())
+        .open(&main_file)
     {
         Ok(file) => file,
         Err(_) => {
@@ -104,8 +113,26 @@ fn main() {
     };
     let _ = file.write_all(DEFAULT_MAIN.as_bytes());
 
-    println!("New project created");
+    let mut file = match OpenOptions::new()
+        .create_new(true)
+        .write(true)
+        .open(&gitignore_file)
+    {
+        Ok(file) => file,
+        Err(_) => {
+            eprintln!(
+                "error: failed to create file `{}`",
+                gitignore_file.to_str().unwrap()
+            );
 
+            process::exit(1);
+        }
+    };
+    let _ = file.write_all(DEFAULT_GITIGNORE.as_bytes());
+
+    Command::new("git").arg("init").current_dir(&project_dir);
+
+    println!("new project created");
     println!("cd {}", project_name);
     println!("cmake -B build -G 'Ninja'");
     println!("cmake --build build && ./build/{}", project_name);
