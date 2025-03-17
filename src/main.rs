@@ -1,11 +1,12 @@
 use std::{
-    fs::{self, File},
+    fs::{create_dir, File},
     io::Write,
     path::PathBuf,
-    process::{Command, Stdio},
+    process::{self, Command, Stdio},
 };
 
 use clap::Parser;
+use colored::Colorize;
 use init::{init_project, InitArgs};
 use new::{new_project, NewArgs};
 
@@ -50,13 +51,25 @@ enum CMakeProjCli {
 }
 
 fn main() {
-    match CMakeProjCli::parse() {
+    let result = match CMakeProjCli::parse() {
         CMakeProjCli::New(args) => new_project(args),
         CMakeProjCli::Init(args) => init_project(args),
+    };
+
+    match result {
+        Ok(_) => {}
+        Err(error) => {
+            eprintln!("{} {}", "Error:".red().bold(), error);
+            process::exit(1);
+        }
     }
 }
 
-pub fn create_all_files(project_name: &String, project_path: &PathBuf, standard: CppStandard) {
+pub fn create_all_files(
+    project_name: &String,
+    project_path: &PathBuf,
+    standard: CppStandard,
+) -> Result<(), String> {
     // Create CMakeLists.txt, .gitignore
     let cmake_file_path = {
         let mut dir = project_path.clone();
@@ -69,11 +82,16 @@ pub fn create_all_files(project_name: &String, project_path: &PathBuf, standard:
         .replace("{{PROJECT_VERSION}}", &standard.version());
     let mut cmake_file = match File::create(cmake_file_path) {
         Ok(file) => file,
-        Err(error) => panic!("failed to create CMakeLists.txt file: {}", error),
+        Err(error) => return Err(format!("failed to create CMakeLists.txt file: {}", error)),
     };
     match cmake_file.write_all(cmake_file_contents.as_bytes()) {
-        Ok(_) => println!("wrote CMakeLists.txt file"),
-        Err(error) => panic!("failed to write into CMakeLists.txt file: {}", error),
+        Ok(_) => println!("{} {}", "✓".green(), "wrote CMakeLists.txt file".black()),
+        Err(error) => {
+            return Err(format!(
+                "failed to write into CMakeLists.txt file: {}",
+                error
+            ))
+        }
     }
 
     let gitignore_file_path = {
@@ -84,11 +102,11 @@ pub fn create_all_files(project_name: &String, project_path: &PathBuf, standard:
 
     let mut gitignore_file = match File::create(gitignore_file_path) {
         Ok(file) => file,
-        Err(error) => panic!("failed to create .gitignore file: {}", error),
+        Err(error) => return Err(format!("failed to create .gitignore file: {}", error)),
     };
     match gitignore_file.write_all(DEFAULT_GITIGNORE.as_bytes()) {
-        Ok(_) => println!("wrote .gitignore file"),
-        Err(error) => panic!("failed to write into .gitignore file: {}", error),
+        Ok(_) => println!("{} {}", "✓".green(), "wrote .gitignore file".black()),
+        Err(error) => return Err(format!("failed to write into .gitignore file: {}", error)),
     }
 
     // Create src/ and src/main.cpp
@@ -98,9 +116,9 @@ pub fn create_all_files(project_name: &String, project_path: &PathBuf, standard:
         dir
     };
 
-    match fs::create_dir(&src_dir_path) {
-        Ok(_) => println!("created src directory"),
-        Err(error) => panic!("failed to create src directory: {}", error),
+    match create_dir(&src_dir_path) {
+        Ok(_) => println!("{} {}", "✓".green(), "created src directory".black()),
+        Err(error) => return Err(format!("failed to create src directory: {}", error)),
     }
 
     let main_cpp_file_path = {
@@ -111,11 +129,11 @@ pub fn create_all_files(project_name: &String, project_path: &PathBuf, standard:
 
     let mut main_cpp_file = match File::create(main_cpp_file_path) {
         Ok(file) => file,
-        Err(error) => panic!("failed to create main.cpp file: {}", error),
+        Err(error) => return Err(format!("Failed to create main.cpp file: {}", error)),
     };
     match main_cpp_file.write_all(DEFAULT_MAIN.as_bytes()) {
-        Ok(_) => println!("wrote main.cpp file"),
-        Err(error) => panic!("failed to write into main.cpp file: {}", error),
+        Ok(_) => println!("{} {}", "✓".green(), "wrote main.cpp file".black()),
+        Err(error) => return Err(format!("failed to write into main.cpp file: {}", error)),
     }
 
     // Initialise git repo
@@ -126,7 +144,20 @@ pub fn create_all_files(project_name: &String, project_path: &PathBuf, standard:
         .stderr(Stdio::null())
         .status()
     {
-        Ok(_) => println!("initialised git repo in project"),
-        Err(error) => panic!("failed to initialise git repo: {}", error),
+        Ok(_) => println!(
+            "{} {}",
+            "✓".green(),
+            "initialised git repo in project".black()
+        ),
+        Err(error) => return Err(format!("failed to initialise git repo: {}", error)),
     }
+
+    println!();
+    println!("Project `{}` created", project_name);
+    println!();
+    println!("cd {}", project_name);
+    println!("cmake -B build -G 'Ninja'");
+    println!("cmake --build build && ./build/{}", project_name);
+
+    Ok(())
 }

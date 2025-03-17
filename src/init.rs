@@ -1,4 +1,4 @@
-use std::{env, fs};
+use std::{env, fs::read_dir};
 
 use crate::{create_all_files, CppStandard};
 
@@ -11,10 +11,10 @@ pub struct InitArgs {
     pub project_path: Option<String>,
 }
 
-pub fn init_project(args: InitArgs) {
+pub fn init_project(args: InitArgs) -> Result<(), String> {
     let current_path = match env::current_dir() {
         Ok(directory) => directory,
-        Err(error) => panic!("failed to get current directory: {}", error),
+        Err(error) => return Err(format!("failed to get current directory: {}", error)),
     };
 
     let project_path = match args.project_path {
@@ -27,17 +27,17 @@ pub fn init_project(args: InitArgs) {
     };
 
     if !project_path.exists() {
-        panic!("specified path does not exist");
+        return Err(format!("specified path does not exist"));
     } else if !project_path.is_dir() {
-        panic!("specified path is not a directory");
-    } else if let Ok(_) = fs::read_dir(&project_path) {
-        panic!("specified path is not empty");
+        return Err(format!("specified path is not a directory"));
+    } else if let Ok(_) = read_dir(&project_path) {
+        return Err(format!("specified path is not empty"));
     }
 
     let project_name = match project_path.file_name() {
         Some(name) => name.to_string_lossy().to_string(),
-        None => panic!("failed to get directory file name"),
+        None => return Err(format!("failed to get directory file name")),
     };
 
-    create_all_files(&project_name, &project_path, args.standard);
+    create_all_files(&project_name, &project_path, args.standard)
 }
