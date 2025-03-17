@@ -1,139 +1,132 @@
 use std::{
-    env,
-    fs::{self, OpenOptions},
+    fs::{self, File},
     io::Write,
-    process::{self, Command},
+    path::PathBuf,
+    process::{Command, Stdio},
 };
 
 use clap::Parser;
+use init::{init_project, InitArgs};
+use new::{new_project, NewArgs};
 
-const DEFAULT_CONFIG: &str = include_str!("../templates/CMakeLists.txt");
-const DEFAULT_GITIGNORE: &str = include_str!("../templates/gitignore");
-const DEFAULT_MAIN: &str = include_str!("../templates/main.cpp");
+mod init;
+mod new;
+
+pub const DEFAULT_CONFIG: &str = include_str!("../templates/CMakeLists.txt");
+pub const DEFAULT_GITIGNORE: &str = include_str!("../templates/gitignore");
+pub const DEFAULT_MAIN: &str = include_str!("../templates/main.cpp");
+
+#[derive(Clone, Copy, clap::ValueEnum)]
+pub enum CppStandard {
+    Cpp20,
+    Cpp23,
+}
+
+impl ToString for CppStandard {
+    fn to_string(&self) -> String {
+        match self {
+            CppStandard::Cpp20 => "cpp20".to_owned(),
+            CppStandard::Cpp23 => "cpp23".to_owned(),
+        }
+    }
+}
+
+impl CppStandard {
+    pub fn version(&self) -> String {
+        match self {
+            CppStandard::Cpp20 => "20".to_owned(),
+            CppStandard::Cpp23 => "23".to_owned(),
+        }
+    }
+}
 
 #[derive(clap::Parser)]
 enum CMakeProjCli {
     #[command(name = "new")]
-    New(Args),
-}
+    New(NewArgs),
 
-#[derive(clap::Args)]
-struct Args {
-    #[arg(value_name = "NAME")]
-    pub project_name: String,
+    #[command(name = "init")]
+    Init(InitArgs),
 }
 
 fn main() {
-    let args = match CMakeProjCli::parse() {
-        CMakeProjCli::New(args) => args,
+    match CMakeProjCli::parse() {
+        CMakeProjCli::New(args) => new_project(args),
+        CMakeProjCli::Init(args) => init_project(args),
+    }
+}
+
+pub fn create_all_files(project_name: &String, project_path: &PathBuf, standard: CppStandard) {
+    // Create CMakeLists.txt, .gitignore
+    let cmake_file_path = {
+        let mut dir = project_path.clone();
+        dir.push("CMakeLists.txt");
+        dir
     };
 
-    let project_name = args.project_name.clone();
-
-    let config_with_project_name = DEFAULT_CONFIG.replace("{{PROJECT_NAME}}", &project_name);
-
-    let current_dir = match env::current_dir() {
-        Ok(dir) => dir,
-        Err(error) => {
-            eprintln!("failed to get current directory: {}", error);
-            process::exit(1);
-        }
+    let cmake_file_contents = DEFAULT_CONFIG
+        .replace("{{PROJECT_NAME}}", &project_name)
+        .replace("{{PROJECT_VERSION}}", &standard.version());
+    let mut cmake_file = match File::create(cmake_file_path) {
+        Ok(file) => file,
+        Err(error) => panic!("failed to create CMakeLists.txt file: {}", error),
     };
-
-    let mut project_dir = current_dir;
-    project_dir.push(&project_name);
-
-    let mut cmakelists_file = project_dir.clone();
-    cmakelists_file.push("CMakeLists.txt");
-
-    let mut gitignore_file = project_dir.clone();
-    gitignore_file.push(".gitignore");
-
-    let mut src_dir = project_dir.clone();
-    src_dir.push("src");
-
-    let mut main_file = src_dir.clone();
-    main_file.push("main.cpp");
-
-    match fs::create_dir(&project_dir) {
-        Ok(_) => {}
-        Err(_) => {
-            eprintln!(
-                "error: destination `{}` already exists",
-                project_dir.to_str().unwrap()
-            );
-
-            process::exit(1);
-        }
+    match cmake_file.write_all(cmake_file_contents.as_bytes()) {
+        Ok(_) => println!("wrote CMakeLists.txt file"),
+        Err(error) => panic!("failed to write into CMakeLists.txt file: {}", error),
     }
 
-    match fs::create_dir(&src_dir) {
-        Ok(_) => {}
-        Err(_) => {
-            eprintln!(
-                "error: destination `{}` already exists",
-                src_dir.to_str().unwrap()
-            );
+    let gitignore_file_path = {
+        let mut dir = project_path.clone();
+        dir.push(".gitignore");
+        dir
+    };
 
-            process::exit(1);
-        }
+    let mut gitignore_file = match File::create(gitignore_file_path) {
+        Ok(file) => file,
+        Err(error) => panic!("failed to create .gitignore file: {}", error),
+    };
+    match gitignore_file.write_all(DEFAULT_GITIGNORE.as_bytes()) {
+        Ok(_) => println!("wrote .gitignore file"),
+        Err(error) => panic!("failed to write into .gitignore file: {}", error),
     }
 
-    let mut file = match OpenOptions::new()
-        .create_new(true)
-        .write(true)
-        .open(&cmakelists_file)
-    {
-        Ok(file) => file,
-        Err(_) => {
-            eprintln!(
-                "error: failed to create file `{}`",
-                cmakelists_file.to_str().unwrap()
-            );
-
-            process::exit(1);
-        }
+    // Create src/ and src/main.cpp
+    let src_dir_path = {
+        let mut dir = project_path.clone();
+        dir.push("src");
+        dir
     };
-    let _ = file.write_all(config_with_project_name.as_bytes());
 
-    let mut file = match OpenOptions::new()
-        .create_new(true)
-        .write(true)
-        .open(&main_file)
-    {
-        Ok(file) => file,
-        Err(_) => {
-            eprintln!(
-                "error: failed to create file `{}`",
-                main_file.to_str().unwrap()
-            );
+    match fs::create_dir(&src_dir_path) {
+        Ok(_) => println!("created src directory"),
+        Err(error) => panic!("failed to create src directory: {}", error),
+    }
 
-            process::exit(1);
-        }
+    let main_cpp_file_path = {
+        let mut dir = src_dir_path.clone();
+        dir.push("main.cpp");
+        dir
     };
-    let _ = file.write_all(DEFAULT_MAIN.as_bytes());
 
-    let mut file = match OpenOptions::new()
-        .create_new(true)
-        .write(true)
-        .open(&gitignore_file)
-    {
+    let mut main_cpp_file = match File::create(main_cpp_file_path) {
         Ok(file) => file,
-        Err(_) => {
-            eprintln!(
-                "error: failed to create file `{}`",
-                gitignore_file.to_str().unwrap()
-            );
-
-            process::exit(1);
-        }
+        Err(error) => panic!("failed to create main.cpp file: {}", error),
     };
-    let _ = file.write_all(DEFAULT_GITIGNORE.as_bytes());
+    match main_cpp_file.write_all(DEFAULT_MAIN.as_bytes()) {
+        Ok(_) => println!("wrote main.cpp file"),
+        Err(error) => panic!("failed to write into main.cpp file: {}", error),
+    }
 
-    Command::new("git").arg("init").current_dir(&project_dir);
-
-    println!("new project created");
-    println!("cd {}", project_name);
-    println!("cmake -B build -G 'Ninja'");
-    println!("cmake --build build && ./build/{}", project_name);
+    // Initialise git repo
+    match Command::new("git")
+        .arg("init")
+        .current_dir(&project_path)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+    {
+        Ok(_) => println!("initialised git repo in project"),
+        Err(error) => panic!("failed to initialise git repo: {}", error),
+    }
 }
