@@ -12,6 +12,8 @@ mod project;
 pub const DEFAULT_CMAKELISTS: &str = include_str!("../templates/CMakeLists.txt");
 pub const DEFAULT_GITIGNORE: &str = include_str!("../templates/gitignore");
 pub const DEFAULT_MAIN: &str = include_str!("../templates/main.cpp");
+pub const DEFAULT_MAIN23: &str = include_str!("../templates/main23.cpp");
+pub const DEFAULT_CLANGD: &str = include_str!("../templates/clangd");
 
 #[derive(clap::Parser)]
 enum CMakeProjCli {

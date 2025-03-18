@@ -7,7 +7,7 @@ use std::{
 
 use colored::Colorize;
 
-use crate::{DEFAULT_CMAKELISTS, DEFAULT_GITIGNORE, DEFAULT_MAIN};
+use crate::{DEFAULT_CLANGD, DEFAULT_CMAKELISTS, DEFAULT_GITIGNORE, DEFAULT_MAIN, DEFAULT_MAIN23};
 
 pub mod init;
 pub mod new;
@@ -52,7 +52,7 @@ pub struct ProjectDetails {
 type ProjectResult = Result<ProjectDetails, String>;
 
 pub fn create_all_files(details: ProjectDetails) -> ProjectResult {
-    // Create CMakeLists.txt, .gitignore
+    // Create CMakeLists.txt, .gitignore, .clangd
     let cmake_file_path = {
         let mut dir = details.path.clone();
         dir.push("CMakeLists.txt");
@@ -91,6 +91,21 @@ pub fn create_all_files(details: ProjectDetails) -> ProjectResult {
         Err(error) => return Err(format!("failed to write into .gitignore file: {}", error)),
     }
 
+    let clangd_file_path = {
+        let mut dir = details.path.clone();
+        dir.push(".clangd");
+        dir
+    };
+
+    let mut clangd_file = match File::create(clangd_file_path) {
+        Ok(file) => file,
+        Err(error) => return Err(format!("failed to create .clangd file: {}", error)),
+    };
+    match clangd_file.write_all(DEFAULT_CLANGD.as_bytes()) {
+        Ok(_) => success_print("wrote .clangd file".to_owned()),
+        Err(error) => return Err(format!("failed to write into .clangd file: {}", error)),
+    }
+
     // Create src/ and src/main.cpp
     let src_dir_path = {
         let mut dir = details.path.clone();
@@ -113,7 +128,13 @@ pub fn create_all_files(details: ProjectDetails) -> ProjectResult {
         Ok(file) => file,
         Err(error) => return Err(format!("Failed to create main.cpp file: {}", error)),
     };
-    match main_cpp_file.write_all(DEFAULT_MAIN.as_bytes()) {
+
+    let main_cpp_contents = match details.standard {
+        CppStandard::Cpp20 => DEFAULT_MAIN,
+        CppStandard::Cpp23 => DEFAULT_MAIN23,
+    };
+
+    match main_cpp_file.write_all(main_cpp_contents.as_bytes()) {
         Ok(_) => success_print("wrote main.cpp file".to_owned()),
         Err(error) => return Err(format!("failed to write into main.cpp file: {}", error)),
     }
