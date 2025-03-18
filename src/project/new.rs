@@ -3,7 +3,7 @@ use std::{
     fs::{create_dir_all, read_dir},
 };
 
-use super::{success_print, CppStandard, ProjectDetails, ProjectResult};
+use super::{success_print, CppStandard, CreationMode, ProjectDetails, ProjectResult};
 
 #[derive(clap::Args)]
 pub struct NewArgs {
@@ -45,5 +45,6 @@ pub fn new_project(args: NewArgs) -> ProjectResult {
         name: project_name,
         path: project_path,
         standard: args.standard,
+        mode: CreationMode::New,
     })
 }

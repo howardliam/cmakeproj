@@ -4,6 +4,7 @@ use project::{
     create_all_files, error_print,
     init::{init_project, InitArgs},
     new::{new_project, NewArgs},
+    CreationMode,
 };
 
 mod project;
@@ -38,7 +39,9 @@ fn main() {
     };
 
     println!("\nProject `{}` created\n", details.name.magenta());
-    println!("{} {}", "cd".green(), details.name);
+    if let CreationMode::New | CreationMode::Init = details.mode {
+        println!("{} {}", "cd".green(), details.name);
+    }
     println!("{} -B build -G {}", "cmake".green(), "'Ninja'".yellow());
     println!(
         "{} --build build && {}{}",

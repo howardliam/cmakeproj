@@ -1,6 +1,6 @@
 use std::{env, fs::read_dir};
 
-use super::{CppStandard, ProjectDetails, ProjectResult};
+use super::{CppStandard, CreationMode, ProjectDetails, ProjectResult};
 
 #[derive(clap::Args)]
 pub struct InitArgs {
@@ -17,21 +17,23 @@ pub fn init_project(args: InitArgs) -> ProjectResult {
         Err(error) => return Err(format!("failed to get current directory: {}", error)),
     };
 
-    let project_path = match args.project_path {
+    let (project_path, mode) = match args.project_path {
         Some(project_path) => {
             let mut dir = current_path.clone();
             dir.push(&project_path);
-            dir
+            (dir, CreationMode::Init)
         }
-        None => current_path,
+        None => (current_path, CreationMode::InitSameDir),
     };
 
     if !project_path.exists() {
         return Err(format!("specified path does not exist"));
     } else if !project_path.is_dir() {
         return Err(format!("specified path is not a directory"));
-    } else if let Ok(_) = read_dir(&project_path) {
-        return Err(format!("specified path is not empty"));
+    } else if let Ok(dir) = read_dir(&project_path) {
+        if dir.count() > 0 {
+            return Err(format!("specified path is not empty"));
+        }
     }
 
     let project_name = match project_path.file_name() {
@@ -43,5 +45,6 @@ pub fn init_project(args: InitArgs) -> ProjectResult {
         name: project_name,
         path: project_path,
         standard: args.standard,
+        mode,
     })
 }

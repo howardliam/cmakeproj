@@ -12,6 +12,12 @@ use crate::{DEFAULT_CMAKELISTS, DEFAULT_GITIGNORE, DEFAULT_MAIN};
 pub mod init;
 pub mod new;
 
+pub enum CreationMode {
+    New,
+    Init,
+    InitSameDir,
+}
+
 #[derive(Clone, Copy, clap::ValueEnum)]
 pub enum CppStandard {
     Cpp20,
@@ -40,6 +46,7 @@ pub struct ProjectDetails {
     pub name: String,
     pub path: PathBuf,
     pub standard: CppStandard,
+    pub mode: CreationMode,
 }
 
 type ProjectResult = Result<ProjectDetails, String>;
