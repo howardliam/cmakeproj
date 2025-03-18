@@ -1,6 +1,6 @@
 use std::{env, fs::read_dir};
 
-use crate::{create_all_files, CppStandard};
+use super::{CppStandard, ProjectDetails, ProjectResult};
 
 #[derive(clap::Args)]
 pub struct InitArgs {
@@ -11,7 +11,7 @@ pub struct InitArgs {
     pub project_path: Option<String>,
 }
 
-pub fn init_project(args: InitArgs) -> Result<(), String> {
+pub fn init_project(args: InitArgs) -> ProjectResult {
     let current_path = match env::current_dir() {
         Ok(directory) => directory,
         Err(error) => return Err(format!("failed to get current directory: {}", error)),
@@ -39,5 +39,9 @@ pub fn init_project(args: InitArgs) -> Result<(), String> {
         None => return Err(format!("failed to get directory file name")),
     };
 
-    create_all_files(&project_name, &project_path, args.standard)
+    Ok(ProjectDetails {
+        name: project_name,
+        path: project_path,
+        standard: args.standard,
+    })
 }
