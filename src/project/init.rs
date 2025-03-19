@@ -27,18 +27,18 @@ pub fn init_project(args: InitArgs) -> ProjectResult {
     };
 
     if !project_path.exists() {
-        return Err(format!("specified path does not exist"));
+        return Err("specified path does not exist".to_owned());
     } else if !project_path.is_dir() {
-        return Err(format!("specified path is not a directory"));
+        return Err("specified path is not a directory".to_owned());
     } else if let Ok(dir) = read_dir(&project_path) {
         if dir.count() > 0 {
-            return Err(format!("specified path is not empty"));
+            return Err("specified path is not empty".to_owned());
         }
     }
 
     let project_name = match project_path.file_name() {
         Some(name) => name.to_string_lossy().to_string(),
-        None => return Err(format!("failed to get directory file name")),
+        None => return Err("failed to get directory file name".to_owned()),
     };
 
     Ok(ProjectDetails {
