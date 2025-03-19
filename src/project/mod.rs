@@ -9,8 +9,11 @@ use colored::Colorize;
 
 use crate::{DEFAULT_CLANGD, DEFAULT_CMAKELISTS, DEFAULT_GITIGNORE, DEFAULT_MAIN, DEFAULT_MAIN23};
 
+pub mod build;
 pub mod init;
 pub mod new;
+pub mod run;
+pub mod setup;
 
 pub enum CreationMode {
     New,
