@@ -8,10 +8,10 @@ cd cmakeproj
 cargo build --release
 ```
 
-You'll then need to make cmakeproj binary available on path, for example:
+You'll then need to make cmakeproj binary available on path, for example (I am yet to make this a crate):
 
 ```bash
-ln -s cmakeproj/target/release/cmakeproj $HOME/scripts
+sudo ln -s /home/liam/Programming/cmakeproj/target/release/cmakeproj /usr/bin/cmakeproj
 ```
 
 ## Usage

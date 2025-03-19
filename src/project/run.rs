@@ -86,7 +86,9 @@ pub fn run_project(args: RunArgs) {
                 }
             }
         }
-        executables.sort_by(|a, b| b.1.cmp(&a.1));
+        if executables.len() > 1 {
+            executables.sort_by(|a, b| b.1.cmp(&a.1));
+        }
         if let Some(first) = executables.first() {
             executable_path = first.0.clone();
         }
