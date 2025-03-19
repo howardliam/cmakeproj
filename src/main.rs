@@ -20,19 +20,22 @@ pub const DEFAULT_CLANGD: &str = include_str!("../templates/clangd");
 
 #[derive(clap::Parser)]
 enum CMakeProjCli {
-    #[command(name = "new")]
+    #[command(name = "new", about = "Creates a new project at targeted directory")]
     New(NewArgs),
 
-    #[command(name = "init")]
+    #[command(
+        name = "init",
+        about = "Creates a new project within an existing directory"
+    )]
     Init(InitArgs),
 
-    #[command(name = "setup")]
+    #[command(name = "setup", about = "Sets up CMake for building")]
     Setup(SetupArgs),
 
-    #[command(name = "build")]
+    #[command(name = "build", about = "Builds the project")]
     Build(BuildArgs),
 
-    #[command(name = "run")]
+    #[command(name = "run", about = "Builds and runs the project")]
     Run(RunArgs),
 }
 
