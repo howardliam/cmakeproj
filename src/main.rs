@@ -57,11 +57,6 @@ fn main() {
     if let CreationMode::New | CreationMode::Init = details.mode {
         println!("{} {}", "cd".green(), details.name);
     }
-    println!("{} -B build -G {}", "cmake".green(), "'Ninja'".yellow());
-    println!(
-        "{} --build build && {}{}",
-        "cmake".green(),
-        "./build/".green(),
-        details.name.green()
-    );
+    println!("{} setup", "cmakeproj".green());
+    println!("{} run", "cmakeproj".green());
 }
